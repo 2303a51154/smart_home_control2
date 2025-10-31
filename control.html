@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Device Control</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    video {
+      display: none;
+      width: 320px;
+      height: 240px;
+      border: 2px solid #27ae60;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header><h1>Device Control Panel</h1></header>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="features.html">Features</a>
+    <a href="control.html">Control</a>
+    <a href="download.html">Download</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+
+  <section class="section">
+    <h2>Try Controlling Devices</h2>
+    <div class="features">
+      <div class="card device">
+        <h3>💡 Light</h3>
+        <button onclick="toggleLight()" id="light-btn">Turn On</button>
+        <div class="device-status" id="light-status">Status: Off</div>
+      </div>
+
+      <div class="card device">
+        <h3>🌬️ Fan</h3>
+        <button onclick="toggleDevice('fan')" id="fan-btn">Turn On</button>
+        <div class="device-status" id="fan-status">Status: Off</div>
+      </div>
+
+      <div class="card device">
+        <h3>🎥 Camera</h3>
+        <button onclick="toggleCamera()" id="camera-btn">Turn On</button>
+        <div class="device-status" id="camera-status">Status: Off</div>
+        <video id="camera-view" autoplay></video>
+      </div>
+    </div>
+  </section>
+
+  <footer><p>© 2025 SmartHome Inc.</p></footer>
+
+  <script>
+    function toggleDevice(device) {
+      const btn = document.getElementById(device + '-btn');
+      const status = document.getElementById(device + '-status');
+      const on = btn.classList.toggle('active');
+      btn.textContent = on ? 'Turn Off' : 'Turn On';
+      status.textContent = `Status: ${on ? 'On' : 'Off'}`;
+      status.style.color = on ? '#27ae60' : '#c0392b';
+    }
+
+    let cameraStream = null;
+
+    async function toggleCamera() {
+      const btn = document.getElementById('camera-btn');
+      const status = document.getElementById('camera-status');
+      const video = document.getElementById('camera-view');
+
+      if (!cameraStream) {
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = cameraStream;
+          video.style.display = 'block';
+          btn.textContent = 'Turn Off';
+          status.textContent = 'Status: On';
+          status.style.color = '#27ae60';
+        } catch (err) {
+          alert('Camera access denied or unavailable.');
+          console.error(err);
+        }
+      } else {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+        video.style.display = 'none';
+        btn.textContent = 'Turn On';
+        status.textContent = 'Status: Off';
+        status.style.color = '#c0392b';
+      }
+    }
+
+    // 🔦 Flashlight Control (for mobile)
+    let lightStream = null;
+    let torchOn = false;
+
+    async function toggleLight() {
+      const btn = document.getElementById('light-btn');
+      const status = document.getElementById('light-status');
+
+      if (!torchOn) {
+        try {
+          const constraints = {
+            video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+          };
+          lightStream = await navigator.mediaDevices.getUserMedia(constraints);
+          const track = lightStream.getVideoTracks()[0];
+          const imageCapture = new ImageCapture(track);
+          const capabilities = await imageCapture.getPhotoCapabilities();
+
+          if (capabilities.torch) {
+            await track.applyConstraints({ advanced: [{ torch: true }] });
+            torchOn = true;
+            btn.textContent = 'Turn Off';
+            status.textContent = 'Status: On';
+            status.style.color = '#27ae60';
+          } else {
+            alert("Torch not supported on this device.");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Could not access flashlight: " + err.message);
+        }
+      } else {
+        // Turn off flashlight
+        if (lightStream) {
+          const track = lightStream.getVideoTracks()[0];
+          await track.applyConstraints({ advanced: [{ torch: false }] });
+          track.stop();
+        }
+        torchOn = false;
+        btn.textContent = 'Turn On';
+        status.textContent = 'Status: Off';
+        status.style.color = '#c0392b';
+      }
+    }
+  </script>
+</body>
+</html>
